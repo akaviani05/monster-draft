@@ -42,3 +42,4 @@ output/screenshots/index.html
 *.sqlite-*
 *.sql
 *.bak
+*credentials*.pdf

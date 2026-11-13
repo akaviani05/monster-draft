@@ -267,3 +267,8 @@ contest/USERNAME-credentials.csv` after creating a private `contest/` directory.
 The generated CSV is exclusive, mode 0600 and must be delivered privately.
 Both scripts use the same ARENA_DATA as initialization. Runtime state, organizer
 inputs and generated reports are ignored; do not force-add them to Git.
+
+Add `--pdf contest/USERNAME-credentials.pdf` to team creation for a private A4
+credential sheet in addition to CSV. Install optional `python3-gi`, `python3-cairo`
+and `gir1.2-pango-1.0` packages for shaped Persian PDF text. Both output paths
+must be new and are created with mode 0600 before the account is added.

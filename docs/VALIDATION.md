@@ -504,3 +504,15 @@ were resolved with filesystem escalation for this repository preparation.
 Final Python regression run: `python3 -m unittest discover -v` passed all
 133 tests in 64.152 seconds. The package regression regenerated the starter ZIP
 and verified its 19-file allowlist. No runner or viewer assets changed.
+
+## Optional team credential PDF (2026-11-13)
+
+`create_team.py --pdf PATH` writes a private A4 credential sheet alongside CSV,
+using optional Pango/Cairo for shaped Persian text. A synthetic one-page sample
+was rendered with Poppler and visually inspected. Provisioning regression checks
+cover account/password agreement, private file permissions, overwrite refusal,
+cleanup on duplicate usernames and prevention of account creation on output failure.
+JavaScript tests (3), Python syntax and Playwright discovery (237 scenarios) passed.
+No browser scenarios were executed for this operator-script change.
+
+Full Python regression suite passed: 134 tests in 63.754 seconds.
