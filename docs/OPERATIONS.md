@@ -1,5 +1,10 @@
 # Deployment and administration
 
+For contest-day sequencing use the [runbook](CONTEST_RUNBOOK.md); for quick
+commands see [README](../README.md). The [project map](PROJECT_STRUCTURE.md) defines
+source/data ownership and the [November 12 experience](CONTEST_EXPERIENCE_2026-11-12.md)
+records the organizer’s teaching and tournament process.
+
 ## Download team submissions
 
 On the administrator's team-management page, use either ZIP download link:
@@ -257,18 +262,33 @@ when the host supports Playwright: use an authorized host execution context for
 these checks. A `blocked` status is not a pass. Windows/macOS execution and other
 browser engines remain outside this Linux/Chromium acceptance record.
 
-## Repository operator scripts
+## Repository operator scripts and login exports
 
-After `python3 -m arena init`, launch a combined web/worker process with
-`ARENA_ORIGIN=http://YOUR-LAN-IP:8000 bash scripts/run_contest.sh`. It binds
-0.0.0.0; optional PORT, SLOTS and ARENA_DATA configure the installation.
-Use `python3 scripts/create_team.py USERNAME "Team name" --output
-contest/USERNAME-credentials.csv` after creating a private `contest/` directory.
-The generated CSV is exclusive, mode 0600 and must be delivered privately.
-Both scripts use the same ARENA_DATA as initialization. Runtime state, organizer
-inputs and generated reports are ignored; do not force-add them to Git.
+`bash scripts/contest.sh` provides `doctor`, `init`, `teams`, `team`, `cards`,
+`run` and `backup`. Use `help`, or a subcommand’s `--help`, for arguments.
+`run` uses `ARENA_ORIGIN`, `ARENA_DATA`, `PORT` and `SLOTS` and includes the worker.
+Tournament schedules, top-K qualification and infrastructure retries are managed
+in `/admin`; no recurring cron task is installed by the scripts.
 
-Add `--pdf contest/USERNAME-credentials.pdf` to team creation for a private A4
-credential sheet in addition to CSV. Install optional `python3-gi`, `python3-cairo`
-and `gir1.2-pango-1.0` packages for shaped Persian PDF text. Both output paths
-must be new and are created with mode 0600 before the account is added.
+`contest.sh teams N` creates numbered accounts and defaults both exports to
+`output/pdf/team-credentials/`. `contest.sh team USER NAME --output CSV --pdf`
+creates one account and a PDF in that same directory. All login PDFs use the
+single layout in `scripts/login_cards.py`: ten cards per A4 page, five rows by
+two columns with dashed cut lines. Print single-sided at actual size and hand
+each team only its own card. Optional `python3-cairo` is the only PDF dependency.
+
+Use `contest.sh cards CSV --pdf NEW.pdf` to reprint saved credentials without
+account/database changes. Never recreate or delete accounts just to reprint.
+Reset passwords through the admin panel; old cards and CSV values are then stale.
+Creation/reprinting rejects existing output files and uses mode 0600. Keep the
+central export directory private and backed up; Git ignores it, including legacy
+files. Do not publish real credential PDFs as screenshots or fixtures.
+
+After stopping both website and worker, `contest.sh backup --stopped --output DIR`
+copies the complete data directory to a new private directory outside the source.
+`--stopped` is the operator’s confirmation, not automatic process detection. A
+failed copy may leave a partial backup; only a successful exit indicates completion.
+Store credential exports separately, since they are not part of ARENA_DATA.
+Restore the full snapshot with services stopped and point ARENA_DATA to it before
+starting again. The backup tool does not erase data, restore over a live database,
+or stop systemd services automatically.

@@ -319,6 +319,26 @@ class Service:
             raise APIError("این نام کاربری قبلاً ثبت شده است.", 409)
         return {"id": uid}
 
+    def provision_numbered_teams(self, user, teams):
+        """Local operator batch import; six-digit passwords are specific to this tool."""
+        self.admin(user)
+        require(isinstance(teams, list) and 1 <= len(teams) <= 1000, "Batch size must be 1..1000")
+        for index, team in enumerate(teams, 1):
+            expected = f"team_{index:02d}"
+            require(team.get("username") == expected and team.get("name") == expected,
+                    "Batch teams must be consecutively numbered from team_01")
+            require(isinstance(team.get("password"), str)
+                    and re.fullmatch(r"[1-9][0-9]{5}", team["password"]),
+                    "Batch passwords must be six digits")
+        try:
+            with self.db.transaction() as con:
+                con.executemany(
+                    "INSERT INTO users(username,name,password,role,created) VALUES(?,?,?,'team',?)",
+                    [(team["username"], team["name"], password_hash(team["password"]), time.time())
+                     for team in teams])
+        except sqlite3.IntegrityError:
+            raise APIError("A numbered team already exists; no teams were created.", 409)
+
     def update_team(self, user, uid, body):
         self.admin(user)
         with self.db.transaction() as con:

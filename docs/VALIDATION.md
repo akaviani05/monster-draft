@@ -516,3 +516,63 @@ JavaScript tests (3), Python syntax and Playwright discovery (237 scenarios) pas
 No browser scenarios were executed for this operator-script change.
 
 Full Python regression suite passed: 134 tests in 63.754 seconds.
+
+## Numbered team provisioning (2026-11-13)
+
+Added `scripts/create_teams.py N --csv PATH --pdf PATH` for numbered accounts
+with six-digit numeric passwords. All account inserts share one service-owned
+SQLite transaction; both private exports are persisted before account creation.
+Six focused regression tests passed, including real CLI execution, login using
+exported credentials, hash verification, 100-team numbering, random endpoint
+values, output permissions, duplicate rollback, output failures, and admin/policy
+checks. Poppler verified every CSV username/password pair in the two-page PDF;
+both synthetic sample pages were rendered and inspected. JavaScript tests passed
+(3), syntax checks and Playwright discovery (237 scenarios) passed. Isolation
+doctor passed. Browser scenarios were not executed for this local provisioning
+change; it adds no HTTP routes or UI behavior.
+
+Full Python regression suite passed: 140 tests in 71.417 seconds.
+
+## Printable login cards (2026-11-13)
+
+Batch PDF export now uses portrait A4 with five rows and two columns, 30-point
+printer margins, shared dashed cut lines and one self-contained credential card
+per team. Unused final-sheet cells remain blank. Print single-sided at actual
+size. Existing private PDFs and accounts were not modified. Reference geometry
+was inspected with all text removed; visual QA used synthetic credentials only.
+Seven focused provisioning tests passed. Poppler bounding-box checks cover
+1, 10, 11 and 50 cards, including the longest supported username: every word
+remains inside its card with at least eight points of cut-line clearance. The
+real CLI test verifies 26 accounts across three pages, CSV/card agreement and
+login with exported credentials. Full and partial synthetic sheets were rendered
+and visually inspected.
+
+Full Python suite: 141 tests passed in 71.122 seconds. JavaScript tests (3),
+Python syntax checks and Playwright discovery (237 scenarios) passed. No browser
+scenarios were executed for this local PDF layout change. Sample fonts are
+embedded and the PDF page size is A4 (595.28 by 841.89 points).
+
+## Central operator workflow and documentation (2026-11-13)
+
+Centralized the ten-card A4 layout in `scripts/login_cards.py`. Single and batch
+creation plus CSV reprinting share it, including font fitting for longer generated
+passwords. Default login exports live in ignored `output/pdf/team-credentials/`.
+Reprinting has no database access. The operator entry point supports initialization,
+isolation checks, account creation, reprinting, serving and explicit offline backup.
+Backup requires the operator to stop both services and pass `--stopped`; it copies
+the complete directory into a new private destination without replacing existing
+files. Existing real contest data and legacy credential exports were left intact.
+
+Added the contest-day runbook, the organizer-reported November 12 experience and
+a project ownership map; updated README, operations and Persian admin guidance.
+Documentation link checks and Python/Bash syntax checks passed. Single-card, full
+and partial sheets were rendered and inspected using synthetic credentials only.
+Isolation doctor passed. Browser execution was attempted but blocked before any
+scenario ran because loopback binding returned EPERM. Playwright discovery is
+recorded separately and is not execution.
+
+Final regression result: 146 Python tests passed in 74.475 seconds; JavaScript
+tests (3), Playwright discovery (237 scenarios), Python/Bash syntax checks and
+edited documentation links passed. The initial full-suite process terminated
+with exit 143 without a test assertion report; a fresh full run completed above.
+Browser execution remains blocked by loopback EPERM, not counted as a pass.

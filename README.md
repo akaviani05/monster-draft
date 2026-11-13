@@ -1,164 +1,145 @@
 # نبرد هیولاها — Monster Draft Duel
 
-A self-hosted Persian RTL programming contest platform. Teams submit Python or
-C++ bots, practice against built-in opponents, challenge other teams and compete
-in scheduled round-robin tournaments with standings and replay playback.
-The server and judge use Python’s standard library; the frontend has no build step
-and serves bundled fonts and artwork locally.
+A self-hosted Persian RTL bot competition: Python/C++ submissions, practice,
+step-by-step debugging, round-robin tournaments, standings and replays.
+The server and judge use Python’s standard library. The frontend is buildless,
+with bundled fonts and artwork; no pip or npm install is needed for hosting.
 
-## 1. Install and initialize
+## Prepare the server
 
-The **contest server requires Linux**, Python 3.10+, `g++` (C++17),
-`libseccomp.so.2` and Landlock ABI ≥ 3 (normally kernel 6.2+). Allow sufficient CPU
-for the chosen match capacity; six available cores and 8 GiB RAM are recommended
-for six parallel matches. No pip or npm installation is needed to host a contest.
+Use Linux, Python 3.10+, C++17 `g++`, libseccomp and Landlock ABI ≥ 3
+(normally kernel 6.2+). For six concurrent games, allow six available CPU cores
+and about 8 GiB RAM. Run as an ordinary dedicated user, not root.
 
 ```bash
 git clone git@github.com:akaviani05/monster-draft.git
 cd monster-draft
-sudo apt install python3 g++ libseccomp2
-
+sudo apt install python3 g++ libseccomp2 python3-cairo
 umask 077
 export ARENA_DATA="$PWD/var"
 export ARENA_ORIGIN="http://192.168.1.10:8000"
-python3 -m arena doctor
-python3 -m arena init
+bash scripts/contest.sh doctor
+bash scripts/contest.sh init
 ```
 
-Replace the example IP with the server’s LAN address. Use the same environment
-settings in every operator terminal. `doctor` must pass before accepting uploaded
-programs; isolation is mandatory. `init` runs once per data directory and prompts
-for an administrator password of 12–128 characters. There is no default password.
-Run the application as an ordinary, dedicated user rather than root.
+Replace the IP with the server’s LAN address. Keep these environment settings
+in each operator terminal. `doctor` must pass; never bypass isolation. `init`
+runs once per data directory and prompts for a 12–128 character administrator
+password. There is no default administrator password or production demo account.
 
-`ARENA_DATA` contains the database, accounts, uploaded programs, queue and replays.
-Use a different private directory for a separate contest; use the existing directory
-to resume one. Never seed demo accounts into a real contest.
+## Create teams and print login cards
 
-## 2. Create teams and credentials
+```bash
+bash scripts/contest.sh teams 50
+```
 
-Create accounts through `/admin`, or use the local operator script after `init`:
+Creates `team_01` through `team_50`, each with a random six-digit numeric password,
+and two private files in the central, Git-ignored directory:
+
+- `output/pdf/team-credentials/team-credentials.csv`: complete organizer roster.
+- `output/pdf/team-credentials/team-login-cards.pdf`: **5 rows × 2 columns per A4
+  page**, dashed cut lines, one team per card; unused cells stay blank.
+
+Print **single-sided at 100% / actual size**, cut and distribute each team’s own
+card. Keep the complete files private. Both files have mode 0600 and are never
+overwritten. Creation is atomic: duplicates or export failure add no accounts.
+Count may be 1–1000. This local batch tool’s six-digit policy does not change
+browser account-creation password requirements.
+
+Reprint saved credentials **without creating accounts or changing passwords**:
+
+```bash
+bash scripts/contest.sh cards output/pdf/team-credentials/team-credentials.csv \
+  --pdf output/pdf/team-credentials/reprint.pdf
+```
+
+For a named team with a random 24-character password and the same card layout:
+
+```bash
+bash scripts/contest.sh team team51 "تیم سیمرغ" \
+  --output output/pdf/team-credentials/team51-credentials.csv --pdf
+```
+
+Explicit `--csv`, `--output`, `--pdf` and `--data` paths are supported by the
+underlying tools; see `--help`. Reset lost passwords in `/admin`; old CSVs/cards
+then become obsolete and must not be redistributed.
+
+## Launch and run the event
+
+```bash
+bash scripts/contest.sh run
+```
+
+This runs the web server **and worker** on **0.0.0.0:8000**. Teams open
+`http://192.168.1.10:8000`; organizers use `/admin` at that URL. Team login uses
+username/password; the separate admin form uses only the administrator password.
+`0.0.0.0` is a bind address, not a browser destination.
+
+| Environment | Purpose |
+| --- | --- |
+| `ARENA_ORIGIN` | Exact browser URL, including scheme and non-default port; required. |
+| `ARENA_DATA` | Private database, accounts, sources, queue and replays; default `var/`. |
+| `PORT` | Listening port, default `8000`; keep the origin consistent. |
+| `SLOTS` | Initial concurrency, default `6`; saved admin settings take precedence. |
+
+The event sequence is: introduce the challenge → distribute guide and login cards
+→ fill team profiles → download and submit `B.py` → explain the protocol → practice
+with the submission debugger → run regular tournaments → advance teams through
+completed qualifying stages to the final. Start ten-minute practice tournaments
+only after the first runs are stable, and avoid building a queue backlog.
+
+Follow the **[contest-day runbook](docs/CONTEST_RUNBOOK.md)** for the complete
+checklist, timing, qualification, error recovery and closeout. The
+**[November 12, 2026 experience](docs/CONTEST_EXPERIENCE_2026-11-12.md)** records
+the organizer’s process and lessons. The [Persian admin guide](docs/ADMIN_GUIDE.md)
+describes the panel controls.
+
+Tournament start freezes each selected final submission; later uploads do not
+change queued games. Standings require three completed games for a ranked team.
+Normal round robin plays `n*(n-1)/2` games; the admin form supports 1–100 games per
+pair. Judge limits are **0.3 s/turn, 2 s/player, 256 MiB address space**. See the
+[authoritative rules and protocol](monster_draft_duel_implementation_spec.md).
+
+## Student materials
+
+Distribute the [web guide](web/guide.html), [PDF guide](web/downloads/student-guide-fa.pdf)
+and [starter ZIP](web/downloads/runner.zip). Students extract the ZIP, open
+`play.py` in Python IDLE and press **F5**; `A.cpp` and `B.py` are included. Python
+bots need Python; C++ bots also need `g++`. The offline viewer opens at
+`viewer/index.html`. The desktop runner is for trusted local programs; website
+uploads always use the Linux sandbox. Windows/macOS support has not been verified
+in this environment.
+
+## Stop, back up and resume
+
+Ctrl+C gracefully stops the combined process. For a new contest, choose a new
+`ARENA_DATA`; to resume, keep the existing directory and rerun `run`, without `init`.
+Only one worker supervisor may own a data directory.
+
+With **both website and worker stopped**, create an offline backup:
 
 ```bash
 mkdir -p contest
 chmod 700 contest
-python3 scripts/create_team.py team01 "تیم سیمرغ" \
-  --output contest/team01-credentials.csv
+bash scripts/contest.sh backup --stopped --output contest/backup-after-final
 ```
 
-Repeat for each team. Usernames must contain 3–32 ASCII letters, digits, dots,
-underscores or hyphens; display names may contain Persian text (1–60 characters).
-The script generates a random 24-character password, stores its hash in the database
-and writes credentials to a new CSV with private permissions (0600).
-Existing usernames and output files are rejected; passwords are never printed.
+The destination must be new and outside `ARENA_DATA`. It copies the entire data
+directory, including SQLite sidecars, submissions and replays. Back up the private
+credential-export directory separately too. Restore a complete snapshot to a
+private directory with services stopped, set `ARENA_DATA` to it and run again.
+Before updating: back up, stop, pull reviewed code, run `doctor`, then restart.
 
-For a printable Persian A4 credential sheet, install the optional PDF dependencies
-and add `--pdf`:
+For unattended or Internet hosting, use the [systemd/nginx examples](deploy/)
+and [operations guide](docs/OPERATIONS.md) for HTTPS, secure cookies and a loopback
+backend. For connection errors check IP/firewall/port; for 403 check the exact
+origin; for queued games check worker health and paused dispatch. Never delete
+contest data to fix a restart or bypass a failed isolation check.
 
-```bash
-sudo apt install python3-gi python3-cairo gir1.2-pango-1.0
-python3 scripts/create_team.py team02 "تیم ققنوس" \
-  --output contest/team02-credentials.csv \
-  --pdf contest/team02-credentials.pdf
-```
+## Project map and development
 
-CSV and PDF contain the same credentials. Deliver each team’s files privately.
-`--data PATH` overrides `ARENA_DATA`. Reset forgotten passwords in `/admin`;
-resets revoke existing sessions. If provisioning is interrupted, check whether the
-account exists before retrying with new output paths.
-
-## 3. Start the contest server
-
-From the repository, with the environment above set:
-
-```bash
-bash scripts/run_contest.sh
-```
-
-This starts the website **and queue worker**, binding to **0.0.0.0:8000**.
-Teams open `http://192.168.1.10:8000`; the organizer opens the same URL with
-`/admin` appended. The admin form accepts only the administrator password;
-teams use their usernames and passwords on the main page. `0.0.0.0` is the bind
-address, not the address to enter in a browser.
-
-| Setting | Purpose |
-| --- | --- |
-| `ARENA_ORIGIN` | Exact public URL, including scheme and non-default port; required by the script. |
-| `ARENA_DATA` | Private state directory; defaults to repository `var/`. |
-| `PORT` | Listening port; default `8000`. Keep the origin’s port consistent. |
-| `SLOTS` | Initial parallel match capacity; default `6`. Saved admin settings take precedence. |
-
-Keep the process running throughout the contest. Ctrl+C stops it; run the same
-command with the same data directory to resume. Only one worker supervisor may
-own a data directory. Change capacity or pause dispatch from the admin page.
-
-For Internet hosting or unattended operation, follow
-[deployment and administration](docs/OPERATIONS.md). The provided
-[systemd and nginx examples](deploy/) use a loopback backend behind HTTPS;
-configure the domain, certificates, secure cookies and trusted proxy there.
-
-## 4. Run a tournament
-
-1. Give teams their credentials, [student guide](web/guide.html),
-   [guide PDF](web/downloads/student-guide-fa.pdf) and
-   [starter ZIP](web/downloads/runner.zip).
-2. Have every team upload and test a Python or C++ bot. New uploads become the
-   selected final version; teams can select an earlier version from history.
-3. In `/admin`, create a tournament, select active teams and set its start time
-   in the organizer browser’s local timezone, or choose “start now”. Every
-   participant must have a valid selected submission.
-4. Keep the worker running. At start, it freezes selected versions and queues
-   the games. Later uploads do not change those games. Monitor progress,
-   standings and replays in the admin page.
-5. If infrastructure fails, fix the cause and retry failed games from the admin
-   page. Such failures pause that tournament’s dispatch and do not award wins.
-
-A normal round robin plays `n × (n − 1) / 2` matches; paired mode doubles that
-and swaps starting seats with the same seed. Main standings require at least
-three completed games and rank by win ratio, then wins, draws, score difference
-and team ID. Teams below the minimum appear separately.
-
-The rules use 30 picks from a 50-card deck and six market slots. Judge limits are
-**0.3 seconds/turn, 2 seconds/player and 256 MiB address space**. See the
-[authoritative specification](monster_draft_duel_implementation_spec.md) for the
-protocol and scoring, and the [Persian admin guide](docs/ADMIN_GUIDE.md) for controls.
-
-## 5. Student practice
-
-Students extract the starter ZIP, open `play.py` in Python IDLE and press **F5**.
-The included `A.cpp` and `B.py` are the two default players; edit the filenames at
-the top of `play.py` to use other local bots. Python bots need Python; C++ bots
-also need `g++`. Open `viewer/index.html` and load the saved `replay.json` to watch
-the match offline. The desktop runner is for trusted local files; website uploads
-always use the isolated Linux judge. Windows/macOS support has not been verified
-in this environment.
-
-## 6. Back up, restart and update
-
-Stop the web and worker processes before taking a simple backup. Copy the **entire
-`ARENA_DATA` directory**, including submissions and replays, to a private backup
-location. Restore all of it together with processes stopped, then restart against
-that directory. Keep referenced files for completed games and frozen versions.
-
-To update, back up first, stop the application, pull reviewed changes, run
-`python3 -m arena doctor` and restart. Do not rerun `init` or delete the database.
-Use a disposable installation for testing updates before a live contest.
-
-Git ignores `var/`, local `contest/` inputs and credentials, and generated reports.
-Keep private files there or outside the checkout; never force-add them. Student
-downloads remain part of the repository.
-
-| Problem | Check |
-| --- | --- |
-| Other machines cannot connect | Server IP, `PORT`, firewall and network reachability. |
-| Requests return 403 | `ARENA_ORIGIN` must exactly match the URL used by clients. |
-| Games stay queued | Worker is running, dispatch is unpaused and capacity is available. |
-| Isolation doctor fails | Kernel/Landlock, libseccomp, compiler and container restrictions; do not bypass isolation. |
-| Accounts seem missing after restart | The same `ARENA_DATA` directory is selected. |
-
-## Development checks
-
-These are development tools, separate from hosting:
+See [project structure](docs/PROJECT_STRUCTURE.md) for ownership, operator commands
+and the boundary between reusable source and private contest data.
 
 ```bash
 python3 -m unittest discover -v
@@ -168,7 +149,6 @@ npx playwright install chromium
 npm run test:browser
 ```
 
-Browser tests use disposable data; discovery alone is not execution. See
-[browser testing](docs/BROWSER_TESTS.md), [security](docs/SECURITY.md) and
-[validation results](docs/VALIDATION.md) for details. Guide and download changes
-require rebuilding and verification as described in [project guidance](AGENTS.md).
+These are development-only checks; browser tests use disposable installations.
+See [browser QA](docs/BROWSER_TESTS.md), [validation](docs/VALIDATION.md),
+[security](docs/SECURITY.md) and [artifact rebuild guidance](AGENTS.md).
