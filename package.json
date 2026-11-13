@@ -1,0 +1,16 @@
+{
+  "name": "monster-draft-duel-qa",
+  "private": true,
+  "description": "Optional browser tests only; website and referee have no npm runtime dependencies.",
+  "scripts": {
+    "test": "node --test tests/replay.test.cjs tests/admin.test.cjs tests/login.test.cjs",
+    "test:browser": "node scripts/browser_tests.cjs",
+    "test:browser:list": "playwright test --list --reporter=list",
+    "test:browser:repeat": "node scripts/browser_tests.cjs --repeat-each=2",
+    "test:screenshots": "node scripts/screenshots.cjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.0",
+    "playwright": "^1.65.0"
+  }
+}
